@@ -1,7 +1,10 @@
+#Ground Removal Experiment
 
+##Aim
 
+In order to optimise algorithm performance, we need to determine which paramaters will best suit our needs. To facilitate this, this experiment program written in C++ will help to collect algorithm performance data for different parameter sets which we can then plot to determine optimal patameters.
 
-Point Categorization
+##Point Categorization
 
 We will assign all points in a frame to one of three categories:
 
@@ -17,7 +20,7 @@ White = Unassigned (default)
 Red = Cone
 Green = Ground
 
-Algorithm Simulation
+##Algorithm Simulation
 
 A C++ program using pcl will be written to run the ground removal algorithm with different parameter sets. The program will then output the data in .csv format so that it can be plotted. The program will allow the user to specify a number of .pcd files with colour assignments to perform the experiment.
 
@@ -31,7 +34,8 @@ The parameters that the user will be able to change include:
     • Baseline set – A parameter set which will be used as a baseline whenever an individual parameter is varied.
 
 To run the experiment, each algorithm variable will be altered individually and the algorithm will then be tested on each of the .pcd files provided. The results compiled will contain the average percentage share for each category from the points removed from the cloud, ignoring unassigned points. The data will also contain the average total number of points removed as well as the average percentage of the total of each category which was removed. The optimal algorithm will have a high percentage of ground points removed and a minimal percentage of cone points removed.
-Analysing the Data
+
+##Analysing the Data
 
 A program written in Python using matplotlib will consume the csv files produced by the simulation program. This program will provide various different plots to display the data produced.
 
