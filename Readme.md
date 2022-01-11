@@ -16,9 +16,9 @@ A C++ program will be written using pcl for assigning points to categories. The 
 
 For convenience, the file will contain all of the original point data with additional colour data which will represent the category of each individual point.
 
-      * White = Unassigned (default)
-      * Red = Cone
-      * Green = Ground
+    • White = Unassigned (default)
+    • Red = Cone
+    • Green = Ground
 
 ## Algorithm Simulation
 
