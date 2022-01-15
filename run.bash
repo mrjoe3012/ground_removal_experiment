@@ -1,0 +1,1 @@
+build/point_categorization
