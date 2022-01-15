@@ -1,4 +1,4 @@
-./build.bash
-./run.bash
-./build/
-./docs/
+build.bash
+run.bash
+/build/*
+/docs/*
