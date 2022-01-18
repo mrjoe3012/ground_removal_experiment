@@ -13,12 +13,12 @@ add_definitions(${PCL_DEFINITIONS})
 
 list(APPEND COMMON_SOURCE src/point_categories.cpp)
 
-list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization.cpp ${COMMON_SOURCE})
+list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization_main.cpp src/point_categorization.cpp src/edit_record.cpp ${COMMON_SOURCE})
 
-add_executable(point_categorization src/point_categorization.cpp src/point_categories.hpp)
+add_executable(point_categorization ${POINT_CATEGORIZATION_SOURCE})
 #add_executable(algorithm_simulation src/algorithm_simulation.cpp)
-
-set_property(TARGET point_categorization PROPERTY CXX_STANDARD 20)
 
 target_link_libraries(point_categorization ${PCL_LIBRARIES} ${Boost_LIBRARIES})
 #target_link_libraries(algorithm_simulation ${PCL_LIBRARIES} ${Boost_LIBRARIES})
+
+set_property(TARGET point_categorization PROPERTY CXX_STANDARD 20)
