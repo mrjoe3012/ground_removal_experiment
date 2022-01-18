@@ -1,3 +1,4 @@
+#pragma once
 #include <tuple>
 
 // namespace shared by various modules which defines
@@ -13,21 +14,12 @@ namespace point_categories
 		Cone,
 		Ground,
 		NUM_CATEGORIES // number of categories which are defined
-	};
+	};	
+
 
 	// Utility function for advancing enum value (0->1->2->0...)
-	PointCategory operator++(PointCategory& c)
-	{
-		return static_cast<PointCategory>((c+1) % PointCategory::NUM_CATEGORIES);
-	}	
-
-	// Postfix
-	PointCategory operator++(PointCategory& c, int)
-	{
-		PointCategory result = c;
-		++c;
-		return result;
-	}
+	PointCategory operator++(PointCategory&);
+	PointCategory operator++(PointCategory&, int);
 	
 
 	// colours associated with each point category
