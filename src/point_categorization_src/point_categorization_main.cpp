@@ -7,12 +7,10 @@
 
 #include <boost/program_options.hpp>
 
-#include "point_categories.hpp"
+#include "common.hpp"
 #include "point_categorization.hpp"
 
 namespace po = boost::program_options;
-
-using namespace point_categorization;
 
 std::string inputFilePath, outputFilePath;
 
@@ -62,9 +60,12 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	using namespace point_categorization;
+	using namespace common;
+
 	std::cout << inputFilePath << std::endl << outputFilePath << std::endl;
 
-	point_categories::PointCategory p = point_categories::PointCategory::Unassigned;
+	PointCategory p = PointCategory::Unassigned;
 	std::cout << p++ << std::endl << p++ << std::endl << p++ << std::endl << p << std::endl;
 	
 	PointCategorization programInstance(inputFilePath, outputFilePath);

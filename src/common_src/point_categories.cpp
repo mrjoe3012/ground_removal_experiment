@@ -1,6 +1,6 @@
 #include "point_categories.hpp"
 
-namespace point_categories
+namespace common
 {
 	
 		PointCategory operator++(PointCategory& c)

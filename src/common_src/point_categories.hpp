@@ -4,7 +4,7 @@
 // namespace shared by various modules which defines
 // different point categories and their corresponding
 // RGB colour value
-namespace point_categories
+namespace common
 {
 	typedef std::tuple<int, int, int> CategoryColour;
 

@@ -7,6 +7,9 @@ namespace point_categorization
 	{
 		_inputFileName = inputFileName;
 		_outputFileName = outputFileName;
+
+		if(!common::checkFile(inputFileName))
+			throw std::runtime_error(std::string("Unable to access file: " + inputFileName));
 	}
 
 	void PointCategorization::tryReadInputFile()

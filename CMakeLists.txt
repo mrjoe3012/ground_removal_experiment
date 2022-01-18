@@ -7,13 +7,16 @@ project(ground_removal_experiment)
 find_package(PCL 1.2 REQUIRED)
 find_package(Boost 1.71 REQUIRED COMPONENTS program_options)
 
-include_directories(${PCL_INCLUDE_DIRS}, ${Boost_INCLUDE_DIRS})
+set(COMMON_INCLUDE_DIR src/common_src)
+set(POINT_CATEGORIZATION_INCLUDE_DIR src/point_categorization_src)
+
+include_directories(${PCL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${POINT_CATEGORIZATION_INCLUDE_DIR} ${COMMON_INCLUDE_DIR})
 link_directories(${PCL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-list(APPEND COMMON_SOURCE src/point_categories.cpp)
+list(APPEND COMMON_SOURCE src/common_src/common.cpp src/common_src/point_categories.cpp)
 
-list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization_main.cpp src/point_categorization.cpp src/edit_record.cpp ${COMMON_SOURCE})
+list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization_src/point_categorization_main.cpp src/point_categorization_src/point_categorization.cpp src/point_categorization_src/edit_record.cpp ${COMMON_SOURCE})
 
 add_executable(point_categorization ${POINT_CATEGORIZATION_SOURCE})
 #add_executable(algorithm_simulation src/algorithm_simulation.cpp)

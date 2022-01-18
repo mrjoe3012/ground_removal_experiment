@@ -1,5 +1,6 @@
 #pragma once
-#include "point_categories.hpp"
+
+#include "common.hpp"
 
 #include <string>
 #include <stdexcept>
@@ -7,8 +8,6 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
-
-using namespace point_categories;
 
 namespace point_categorization
 {
@@ -28,7 +27,7 @@ namespace point_categorization
 			const float _BRUSH_SIZE_INCREMENT_SMALL = 0.05f, _BRUSH_SIZE_INCREMENT_LARGE = 0.2f;
 
 			float _brushSize = 0.1f;
-			PointCategory _currentPointCategory = PointCategory::Unassigned;
+			common::PointCategory _currentPointCategory = common::PointCategory::Unassigned;
 
 			std::string _inputFileName, _outputFileName;
 
@@ -36,7 +35,9 @@ namespace point_categorization
 
 			pcl::visualization::PCLVisualizer::Ptr _pVisualizer = nullptr;
 
+			// attempts to read input point cloud data
 			void tryReadInputFile();
+			// initializes the visualizer and its callbacks
 			void setupVisualizer();
 
 			// visualizer callbacks
