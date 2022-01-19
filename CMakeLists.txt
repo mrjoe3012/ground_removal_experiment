@@ -14,7 +14,7 @@ include_directories(${PCL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${POINT_CATEGORIZA
 link_directories(${PCL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-list(APPEND COMMON_SOURCE src/common_src/common.cpp src/common_src/point_categories.cpp)
+list(APPEND COMMON_SOURCE src/common_src/common.cpp src/common_src/point_categories.cpp src/common_src/debug_out.cpp)
 
 list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization_src/point_categorization_main.cpp src/point_categorization_src/point_categorization.cpp src/point_categorization_src/edit_record.cpp ${COMMON_SOURCE})
 

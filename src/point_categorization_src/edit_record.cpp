@@ -3,7 +3,9 @@
 namespace point_categorization
 {
 	EditRecord::EditRecord(UndoFunc undoFunc, RedoFunc redoFunc)
-	:	_undo(undoFunc), _redo(redoFunc)
+	:
+	_undo(undoFunc),
+	_redo(redoFunc)
 	{
 	}
 

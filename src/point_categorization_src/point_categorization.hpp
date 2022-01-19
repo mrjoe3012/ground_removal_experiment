@@ -4,6 +4,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <cstdio>
 
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/point_types.h>

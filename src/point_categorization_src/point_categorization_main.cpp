@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <string>
 
 
@@ -55,22 +56,26 @@ bool handleProgramOptions(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
+	using namespace point_categorization;
+	using common::DebugOut;
+
+	DebugOut& debugStream = DebugOut::instance();
+	debugStream.enabled = false;
+
+	debugStream << common::fstring("Handling %d commandline arguments...", argc) << std::endl;
+
 	if(!handleProgramOptions(argc, argv))
 	{
 		return 0;
 	}
 
-	using namespace point_categorization;
-	using namespace common;
+	debugStream << common::fstring("inputFilePath: \"%s\"\noutputFilePath: \"%s\"", inputFilePath.c_str(), outputFilePath.c_str()) << std::endl;
 
-	std::cout << inputFilePath << std::endl << outputFilePath << std::endl;
-
-	PointCategory p = PointCategory::Unassigned;
-	std::cout << p++ << std::endl << p++ << std::endl << p++ << std::endl << p << std::endl;
-	
 	PointCategorization programInstance(inputFilePath, outputFilePath);
 
 	programInstance.run();
+
+	debugStream << "Shutting down..." << std::endl;
 
 	return 0;
 }
