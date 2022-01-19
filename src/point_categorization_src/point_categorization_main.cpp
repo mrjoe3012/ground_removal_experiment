@@ -60,7 +60,6 @@ int main(int argc, char* argv[])
 	using common::DebugOut;
 
 	DebugOut& debugStream = DebugOut::instance();
-	debugStream.enabled = false;
 
 	debugStream << common::fstring("Handling %d commandline arguments...", argc) << std::endl;
 

@@ -38,10 +38,15 @@ namespace point_categorization
 
 			// attempts to read input point cloud data
 			void tryReadInputFile();
+			// sets RGB colour to unassigned for any points
+			// that have no RGB data
+			void initializePointCloudRGB();
 			// initializes the visualizer and its callbacks
 			void setupVisualizer();
+			void visualizerLoop();
 
-			// visualizer callbacks
+			
+			
 	};
 	
 }
