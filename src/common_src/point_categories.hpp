@@ -1,5 +1,6 @@
 #pragma once
 #include <tuple>
+#include <unordered_map>
 
 // namespace shared by various modules which defines
 // different point categories and their corresponding
@@ -25,11 +26,6 @@ namespace common
 	// colours associated with each point category
 	// (will be seen in visualizer and written to
 	// output .pcd)
-	const CategoryColour
-		COLOUR_Unassigned = std::make_tuple(0,0,0),
-		COLOUR_Cone = std::make_tuple(255,0,0),
-		COLOUR_Ground = std::make_tuple(0,255,0);
-		
-
+	extern std::unordered_map<PointCategory, CategoryColour> categoryColours;
 
 }
