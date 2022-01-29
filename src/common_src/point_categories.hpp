@@ -15,14 +15,8 @@ namespace common
 		Unassigned,
 		Cone,
 		Ground,
-		NUM_CATEGORIES // number of categories which are defined
 	};	
 
-
-	// Utility function for advancing enum value (0->1->2->0...)
-	PointCategory operator++(PointCategory&);
-	PointCategory operator++(PointCategory&, int);
-	
 
 	// colours associated with each point category
 	// (will be seen in visualizer and written to
