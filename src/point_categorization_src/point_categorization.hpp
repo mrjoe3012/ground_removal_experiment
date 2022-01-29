@@ -2,9 +2,14 @@
 
 #include "common.hpp"
 
+#include "edit_stack.hpp"
+#include "edit_record.hpp"
+
 #include <string>
 #include <stdexcept>
 #include <cstdio>
+#include <functional>
+#include <cmath>
 
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/point_types.h>
@@ -24,7 +29,7 @@ namespace point_categorization
 			void run();
 
 		private:
-			const float _MAX_BRUSH_SIZE = 1.5f, _MIN_BRUSH_SIZE = 0.05f;
+			const float _MAX_BRUSH_SIZE = 1.0f, _MIN_BRUSH_SIZE = 0.05f;
 			const float _BRUSH_SIZE_INCREMENT_SMALL = 0.05f, _BRUSH_SIZE_INCREMENT_LARGE = 0.2f;
 
 			float _brushSize = 0.1f;
@@ -35,6 +40,14 @@ namespace point_categorization
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr _pCloud = nullptr;
 
 			pcl::visualization::PCLVisualizer::Ptr _pVisualizer = nullptr;
+			
+			// a flag that tells us when the visualizer needs
+			// to update its point cloud
+			bool _cloudModified = false;
+
+			// edit stack structure containign editrecords
+			// and providing undo/redo functionality
+			EditStack _editStack;
 
 			// attempts to read input point cloud data
 			void tryReadInputFile();
@@ -45,8 +58,20 @@ namespace point_categorization
 			void setupVisualizer();
 			void visualizerLoop();
 
+			void viewerKeyboardCallback(const pcl::visualization::KeyboardEvent&);
+			void viewerPointPickingCallback(const pcl::visualization::PointPickingEvent&);	
+
+			std::vector<pcl::PointXYZRGB*> getPointsNear(const pcl::PointXYZRGB& p, float maxDistance);
+
+			void tryUndo();
+			void tryRedo();
+
+			void categorizePointsNear(pcl::PointXYZRGB p);
+			void trySavePointCloud();
 			
-			
+			void setCurrentPointCategory(common::PointCategory);
+
+			void setBrushSize(float newSize);
 	};
 	
 }

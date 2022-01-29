@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+
+set(CMAKE_CXX_FLAGS "-O0")
 
 project(ground_removal_experiment)
 
@@ -16,7 +18,7 @@ add_definitions(${PCL_DEFINITIONS})
 
 list(APPEND COMMON_SOURCE src/common_src/common.cpp src/common_src/point_categories.cpp src/common_src/debug_out.cpp)
 
-list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization_src/point_categorization_main.cpp src/point_categorization_src/point_categorization.cpp src/point_categorization_src/edit_record.cpp ${COMMON_SOURCE})
+list(APPEND POINT_CATEGORIZATION_SOURCE src/point_categorization_src/point_categorization_main.cpp src/point_categorization_src/point_categorization.cpp src/point_categorization_src/edit_record.cpp src/point_categorization_src/edit_stack.cpp ${COMMON_SOURCE})
 
 add_executable(point_categorization ${POINT_CATEGORIZATION_SOURCE})
 #add_executable(algorithm_simulation src/algorithm_simulation.cpp)
