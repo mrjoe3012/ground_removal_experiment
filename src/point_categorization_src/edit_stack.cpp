@@ -2,12 +2,12 @@
 
 using namespace point_categorization;
 
-bool EditStack::canUndo()
+bool EditStack::canUndo() const
 {
 	return (_records.size() > 0);
 }
 
-bool EditStack::canRedo()
+bool EditStack::canRedo() const
 {
 	return (_undoneRecords.size() > 0);
 }
@@ -42,4 +42,10 @@ void EditStack::redo()
 	record.redo();
 
 	_records.push_back(record);	
+}
+
+void EditStack::clear()
+{
+	_records.clear();
+	_undoneRecords.clear();
 }

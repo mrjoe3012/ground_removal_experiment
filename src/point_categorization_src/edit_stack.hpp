@@ -17,8 +17,8 @@ namespace point_categorization
 		
 			void pushEdit(const EditRecord& record);
 
-			bool canUndo();
-			bool canRedo();
+			bool canUndo() const;
+			bool canRedo() const;
 
 			void undo();
 			void redo();
