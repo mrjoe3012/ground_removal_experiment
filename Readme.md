@@ -30,7 +30,6 @@ The parameters that the user will be able to change include:
 
 - Minimum/Maximum per parameter
 - Iterations per parameters
-- Incremental step per parameter
 - Baseline set – A parameter set which will be used as a baseline whenever an individual parameter is varied.
 
 To run the experiment, each algorithm variable will be altered individually and the algorithm will then be tested on each of the .pcd files provided. The results compiled will contain the average percentage share for each category from the points removed from the cloud, ignoring unassigned points. The data will also contain the average total number of points removed as well as the average percentage of the total of each category which was removed. The optimal algorithm will have a high percentage of ground points removed and a minimal percentage of cone points removed.
