@@ -41,6 +41,5 @@ A program written in Python using matplotlib will consume the csv files produced
 
 Plots that will be displayed include:
 
-- Each individual parameter against the percentages of cone/ground points removed from the all removed points.
-- Each individual parameter against the total amount of points removed from each frame.
-- Each individual parameter against the percentage of cone/ground points removed from the total of assigned points for each frame.
+- Each individual parameter against the percentage breakdown of the categories of the points removed.
+- Each individual parameter against the average number of points removed across each frame.
