@@ -1,6 +1,0 @@
-build.bash
-run.bash
-build/*
-docs/*
-
-!docs/*.pdf
