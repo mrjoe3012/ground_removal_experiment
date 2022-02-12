@@ -1,0 +1,3 @@
+[submodule "src/ground_removal"]
+	path = src/ground_removal
+	url = git@github.com:mrjoe3012/ground_removal.git
