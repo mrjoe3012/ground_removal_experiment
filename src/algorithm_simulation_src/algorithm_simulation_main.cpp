@@ -1,5 +1,7 @@
 #include <string>
 #include <stdexcept>
+#include <fstream>
+#include <filesystem>
 
 #include <boost/program_options.hpp>
 
@@ -311,6 +313,55 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 }
 
+bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& result)
+{
+
+	namespace fs = std::filesystem;
+
+	DebugOut& debug = DebugOut::instance();
+
+	try
+	{
+	
+		debug << common::fstring("Writing simulation data to '%s'...", outputDirectoryPath.c_str()) << std::endl;
+
+		fs::path outputPath = outputDirectoryPath;
+
+		if(!fs::exists(outputPath))
+			throw std::runtime_error(common::fstring("Bad output directory '%s'", outputDirectoryPath.c_str()));
+	
+
+		for(std::pair<std::string, std::vector<SimulationData>> parameterData : result)
+		{
+			std::string parameterName = parameterData.first;
+			fs::path filePath = outputPath;
+			filePath += ("/" + parameterName + ".csv");
+			std::vector<SimulationData>& dataList = parameterData.second;
+			std::ofstream outputFile(filePath, std::ios::out);
+			if(!outputFile.good())
+				throw std::runtime_error(common::fstring("Unable to open/create file '%s'", filePath.c_str()));
+			
+			outputFile << "value,total_removed,ground_removed,cone_removed,unassigned_removed" << std::endl;
+
+			for(SimulationData data : dataList)
+			{
+				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageConePointsRemoved, data.averageConePointsRemoved) << std::endl;
+			}
+		}	
+
+	}
+	catch(const std::exception& e)
+	{
+		debug << "Error: " << e.what() << std::endl;
+		return false;
+	}
+
+	debug << "Finished writing simulation data." << std::endl;
+
+	return true;
+
+}
+
 int main(int argc, char* argv[])
 {
 	DebugOut& debug = DebugOut::instance();
@@ -333,7 +384,10 @@ int main(int argc, char* argv[])
 	if(!readPointClouds(inputPointCloudPaths, inputPointClouds))
 		return -1;
 
-	simulateAlgorithm(numSteps, inputPointClouds, baselineSet, algorithmParameters);
+	SimulationResult simulationResult = simulateAlgorithm(numSteps, inputPointClouds, baselineSet, algorithmParameters);
+
+	if(!writeResultsToCSV(outputPath, simulationResult))
+		return -1;
 
 	return 0;
 }
