@@ -10,15 +10,15 @@ namespace algorithm_simulation
 
 		public:
 			// the value of the variable parameter when the results were recorded.
-			float parameterValue;
+			double parameterValue;
 			// (total points removed) / (total number of points)
-			float averagePointsRemovedTotal;
+			double averagePointsRemovedTotal;
 			// (ground points removed) / (total points removed)
-			float averageGroundPointsRemoved;
+			double averageGroundPointsRemoved;
 			// (unassigned points removed) / (total points removed)
-			float averageUnassignedPointsRemoved;
+			double averageUnassignedPointsRemoved;
 			// (cone points removed) / (total points removed)
-			float averageConePointsRemoved;
+			double averageConePointsRemoved;
 
 	};
 

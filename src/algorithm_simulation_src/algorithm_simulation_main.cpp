@@ -220,18 +220,18 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 		ParameterSet parameterSet = baselineSet;
 
-		float totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, unassignedRemoved = 0.0f;
-
 		do
 		{
+
+			double totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, unassignedRemoved = 0.0f;
 
 			parameter.updateParameterSet(parameterSet);
 
 			for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
 			{
-				float total1 = 0.0f, total2 = 0.0f;
-				float ground1 = 0.0f, cone1 = 0.0f, unassigned1 = 0.0f;
-				float ground2 = 0.0f, cone2 = 0.0f, unassigned2 = 0.0f;
+				double total1 = 0.0f, total2 = 0.0f;
+				double ground1 = 0.0f, cone1 = 0.0f, unassigned1 = 0.0f;
+				double ground2 = 0.0f, cone2 = 0.0f, unassigned2 = 0.0f;
 
 				for(pcl::PointXYZRGB p : *pInputCloud)
 				{
@@ -283,7 +283,7 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 			}
 
-			float numClouds = static_cast<float>(inputPointClouds.size());
+			double numClouds = static_cast<double>(inputPointClouds.size());
 
 			totalRemoved /= numClouds;
 			groundRemoved /= numClouds;
