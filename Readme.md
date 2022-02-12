@@ -30,7 +30,6 @@ The parameters that the user will be able to change include:
 
 - Minimum/Maximum per parameter
 - Iterations per parameters
-- Incremental step per parameter
 - Baseline set – A parameter set which will be used as a baseline whenever an individual parameter is varied.
 
 To run the experiment, each algorithm variable will be altered individually and the algorithm will then be tested on each of the .pcd files provided. The results compiled will contain the average percentage share for each category from the points removed from the cloud, ignoring unassigned points. The data will also contain the average total number of points removed as well as the average percentage of the total of each category which was removed. The optimal algorithm will have a high percentage of ground points removed and a minimal percentage of cone points removed.
@@ -41,6 +40,5 @@ A program written in Python using matplotlib will consume the csv files produced
 
 Plots that will be displayed include:
 
-- Each individual parameter against the percentages of cone/ground points removed from the all removed points.
-- Each individual parameter against the total amount of points removed from each frame.
-- Each individual parameter against the percentage of cone/ground points removed from the total of assigned points for each frame.
+- Each individual parameter against the percentage breakdown of the categories of the points removed.
+- Each individual parameter against the average number of points removed across each frame.
