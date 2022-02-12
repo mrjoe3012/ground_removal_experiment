@@ -345,7 +345,7 @@ bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& 
 
 			for(SimulationData data : dataList)
 			{
-				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageConePointsRemoved, data.averageConePointsRemoved) << std::endl;
+				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageConePointsRemoved, data.averageUnassignedPointsRemoved) << std::endl;
 			}
 		}	
 
