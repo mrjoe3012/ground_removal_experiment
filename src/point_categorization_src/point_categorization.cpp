@@ -230,7 +230,7 @@ namespace point_categorization
 		for(pcl::PointXYZRGB* p : points)
 		{
 			previousColours.push_back(std::make_tuple(p->r, p->g, p->b));
-			p->r = std::get<0>(colour), p->g = std::get<1>(colour), p->b = std::get<1>(colour);
+			p->r = std::get<0>(colour), p->g = std::get<1>(colour), p->b = std::get<2>(colour);
 		}
 
 		// mark cloud as modified so that it gets updated
