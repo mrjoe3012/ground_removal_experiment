@@ -225,6 +225,35 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 		// initialize parameter set to default, so that other parameters
 		// take a known value
 		ParameterSet parameterSet = baselineSet;
+	
+		typedef struct { float total,cone,ground,unassigned; } CloudData;
+		std::vector< CloudData > cloudData;
+		
+		// cache the total points and points in each category for our input
+		// point clouds.
+		for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
+		{
+			float t = 0.0f, c = 0.0f, g = 0.0f, u = 0.0f;
+
+			for(pcl::PointXYZRGB p : *pInputCloud)
+			{
+				t++;
+
+				CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
+
+				if(colour == categoryColours[PointCategory::Cone])
+					c++;
+				else if(colour == categoryColours[PointCategory::Ground])
+					g++;
+				else
+					u++;	
+			}
+
+			cloudData.push_back({
+				.total=t, .cone=c, .ground=g, .unassigned=u
+			});
+
+		}
 
 		// loop through each possible value of the parameter
 		do
@@ -236,31 +265,16 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 			// held by AlgorithmParameter parameter
 			parameter.updateParameterSet(parameterSet);
 
-			// go through each point to determine how many points are in there before
-			// ground removal
-			// (very inefficient as we technically only need to do this once but instead,
-			// do it every parameter to make the program simpler overall)
+			unsigned int j = 0;
+
 			for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
 			{
-				double total1 = 0.0f, total2 = 0.0f;
-				double ground1 = 0.0f, cone1 = 0.0f, unassigned1 = 0.0f;
+				double total1 = cloudData[j].total, total2 = 0.0f;
+				// use cached cloud data for the initial values
+				double ground1 = cloudData[j].ground, cone1 = cloudData[j].cone, unassigned1 = cloudData[j].unassigned;
+				j++;
+
 				double ground2 = 0.0f, cone2 = 0.0f, unassigned2 = 0.0f;
-
-				for(pcl::PointXYZRGB p : *pInputCloud)
-				{
-					total1++;
-
-					CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
-
-					if(colour == categoryColours[PointCategory::Cone])
-						cone1++;
-					else if(colour == categoryColours[PointCategory::Ground])
-						ground1++;
-					else
-						unassigned1++;
-
-
-				}
 
 				// use ground removal algorithm to generate a new point cloud
 				std::unique_ptr<ground_removal::SegmentArray<pcl::PointXYZRGB>> pSegmentArray = ground_removal::assignPointsToBinsAndSegments(*pInputCloud, parameterSet.numSegments, parameterSet.numBins);
