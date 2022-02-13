@@ -20,6 +20,7 @@ using namespace algorithm_simulation;
 
 using common::DebugOut;
 
+// take the commandline arguments and resolve the input files, config file and output directory
 bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPointCloudPaths, std::string& configFilePath, std::string& outputPath)
 {
 	DebugOut& debug = DebugOut::instance();
@@ -69,6 +70,7 @@ bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPoint
 	}
 }
 
+// attempt to read a .cfg file containing simulation parameters.
 bool readConfigFile(const std::string& path, ParameterSet& baselineSet, std::vector<AlgorithmParameter>& algorithmParameters, unsigned int& numSteps)
 {
 
@@ -160,6 +162,7 @@ bool readConfigFile(const std::string& path, ParameterSet& baselineSet, std::vec
 
 }
 
+// attempt to read point clouds from provided .pcd files
 bool readPointClouds(const std::vector<std::string>& paths, std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr>& inputPointClouds)
 {
 	DebugOut& debug = DebugOut::instance();
@@ -209,24 +212,34 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 	SimulationResult result;
 
+	// loop through each parameter for the algorithm
 	for(AlgorithmParameter parameter : algorithmParameters)
 	{
 
 		debug << fstring("Stepping through parameter '%s'...", parameter.name().c_str()) << std::endl;
 		
+		// list which will contain results for each parameter value
 		std::vector<SimulationData> dataList;
-
+		// initialize the value to minimum
 		parameter.value(parameter.minValue());
-
+		// initialize parameter set to default, so that other parameters
+		// take a known value
 		ParameterSet parameterSet = baselineSet;
 
+		// loop through each possible value of the parameter
 		do
 		{
-
+			// keep track of how many points are removed for each category
 			double totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, unassignedRemoved = 0.0f;
 
+			// modifies the parameter set according to the current value
+			// held by AlgorithmParameter parameter
 			parameter.updateParameterSet(parameterSet);
 
+			// go through each point to determine how many points are in there before
+			// ground removal
+			// (very inefficient as we technically only need to do this once but instead,
+			// do it every parameter to make the program simpler overall)
 			for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
 			{
 				double total1 = 0.0f, total2 = 0.0f;
@@ -249,8 +262,13 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 				}
 
+				// use ground removal algorithm to generate a new point cloud
 				std::unique_ptr<ground_removal::SegmentArray<pcl::PointXYZRGB>> pSegmentArray = ground_removal::assignPointsToBinsAndSegments(*pInputCloud, parameterSet.numSegments, parameterSet.numBins);
 
+				// translate the ParameterSet object into ground_removal::AlgorithmParameters,
+				// which is the structure used by the algorithm.
+				// Note that technically, numBins and numSegments are not parameters and are
+				// instead used in segmentation.
 				ground_removal::AlgorithmParameters algorithmParams = {
 					.tM = parameterSet.tM,
 					.tMSmall = parameterSet.tMSmall,
@@ -262,6 +280,8 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 				pcl::PointCloud<pcl::PointXYZRGB>::Ptr pProcessedCloud = ground_removal::groundRemoval<pcl::PointXYZRGB>(*pSegmentArray, algorithmParams);
 
+				// go through the processed cloud to determine the difference in points for each
+				// category
 				for(pcl::PointXYZRGB p : *pProcessedCloud)
 				{
 					total2++;
@@ -276,6 +296,7 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 						unassigned2++;
 				}
 
+				// accumulate the ratios (which will be averaged)
 				totalRemoved += (total1-total2) / total1;
 				groundRemoved += (ground1-ground2) / (total1-total2);
 				coneRemoved += (cone1-cone2) / (total1-total2);
@@ -285,11 +306,13 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 
 			double numClouds = static_cast<double>(inputPointClouds.size());
 
+			// calculate averages
 			totalRemoved /= numClouds;
 			groundRemoved /= numClouds;
 			coneRemoved /= numClouds;
 			unassignedRemoved /= numClouds;
 
+			// create final data report
 			SimulationData data = {
 				.parameterValue = parameter.value(),
 				.averagePointsRemovedTotal = totalRemoved,
@@ -324,13 +347,14 @@ bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& 
 	{
 	
 		debug << common::fstring("Writing simulation data to '%s'...", outputDirectoryPath.c_str()) << std::endl;
-
+		// the output directory provided by the user
 		fs::path outputPath = outputDirectoryPath;
 
+		// ensure the path exists
 		if(!fs::exists(outputPath))
 			throw std::runtime_error(common::fstring("Bad output directory '%s'", outputDirectoryPath.c_str()));
 	
-
+		// write a csv file for each parameter
 		for(std::pair<std::string, std::vector<SimulationData>> parameterData : result)
 		{
 			std::string parameterName = parameterData.first;
@@ -340,9 +364,9 @@ bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& 
 			std::ofstream outputFile(filePath, std::ios::out);
 			if(!outputFile.good())
 				throw std::runtime_error(common::fstring("Unable to open/create file '%s'", filePath.c_str()));
-			
+			// first line is a header with column names
 			outputFile << "value,total_removed,ground_removed,cone_removed,unassigned_removed" << std::endl;
-
+			// main data
 			for(SimulationData data : dataList)
 			{
 				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageConePointsRemoved, data.averageUnassignedPointsRemoved) << std::endl;
@@ -369,6 +393,7 @@ int main(int argc, char* argv[])
 	std::vector<std::string> inputPointCloudPaths;
 	std::string configFilePath, outputPath;
 
+	// returning by reference
 	if(!handleArguments(argc, argv, inputPointCloudPaths, configFilePath, outputPath))
 		return 0;
 
@@ -376,11 +401,13 @@ int main(int argc, char* argv[])
 	std::vector<AlgorithmParameter> algorithmParameters;
 	unsigned int numSteps;
 
+	// returning by reference
 	if(!readConfigFile(configFilePath, baselineSet, algorithmParameters, numSteps))
 		return -1;
 
 	std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> inputPointClouds;
 
+	// returning by reference
 	if(!readPointClouds(inputPointCloudPaths, inputPointClouds))
 		return -1;
 

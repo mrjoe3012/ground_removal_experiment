@@ -5,6 +5,9 @@
 namespace algorithm_simulation
 {
 
+	// holds the data that is collected for each parameter.
+	// data may be collected for multiple .pcd frames, in which
+	// case values are averaged.
 	struct SimulationData
 	{
 
@@ -22,6 +25,9 @@ namespace algorithm_simulation
 
 	};
 
+	// simulation will return a list where each element contains the name of the parameter
+	// and its corresponding list of results, where each result was collected with a specific
+	// value for the parameter.
 	typedef std::vector<std::pair<std::string, std::vector<SimulationData>>> SimulationResult;
 
 }

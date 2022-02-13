@@ -62,7 +62,9 @@ namespace algorithm_simulation
 		}
 
 		_value = newValue;
-
+		// return false if we overstepped so that it's
+		// easier to loop through all of an AlgorithmParameter's
+		// possible values.
 		return !overStepped;
 	}
 }

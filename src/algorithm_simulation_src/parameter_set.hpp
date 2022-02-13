@@ -3,6 +3,7 @@
 namespace algorithm_simulation
 {
 
+	// represents the ground removal algorithm parameters,
 	struct ParameterSet
 	{
 		unsigned int numBins, numSegments;

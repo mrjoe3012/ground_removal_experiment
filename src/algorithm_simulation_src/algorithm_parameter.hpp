@@ -8,10 +8,17 @@
 namespace algorithm_simulation
 {
 
+	// represents a parameter used in the algorithm.
+	// This class provides a way to easily change the parameter's
+	// value and provides a way to alter a ParameterSet based on
+	// its value.
 	class AlgorithmParameter
 	{
 
 		private:
+			// the function that will be specified on the parameter's creation,
+			// this is so we can define how each parameter will alter the corresponding
+			// parameter set, which translates directly to ground removal algorithm parameters.
 			std::function<void(float value, ParameterSet&)> _updateParameterSetFunc;
 
 			float _value, _minValue, _maxValue;
