@@ -379,7 +379,7 @@ bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& 
 			if(!outputFile.good())
 				throw std::runtime_error(common::fstring("Unable to open/create file '%s'", filePath.c_str()));
 			// first line is a header with column names
-			outputFile << "value,total_removed,ground_removed,ground_removed_total,unassigned_removed" << std::endl;
+			outputFile << "value,total_removed,ground_removed,ground_removed_total,cone_removed" << std::endl;
 			// main data
 			for(SimulationData data : dataList)
 			{
