@@ -259,7 +259,7 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 		do
 		{
 			// keep track of how many points are removed for each category
-			double totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, unassignedRemoved = 0.0f;
+			double totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, groundRemovedTotal = 0.0f;
 
 			// modifies the parameter set according to the current value
 			// held by AlgorithmParameter parameter
@@ -313,8 +313,8 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 				// accumulate the ratios (which will be averaged)
 				totalRemoved += (total1-total2) / total1;
 				groundRemoved += (ground1-ground2) / (total1-total2);
+				groundRemovedTotal += (ground1-ground2) / (ground1);
 				coneRemoved += (cone1-cone2) / (total1-total2);
-				unassignedRemoved += (unassigned1-unassigned2) / (total1-total2);
 
 			}
 
@@ -324,20 +324,20 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl:
 			totalRemoved /= numClouds;
 			groundRemoved /= numClouds;
 			coneRemoved /= numClouds;
-			unassignedRemoved /= numClouds;
+			groundRemovedTotal /= numClouds;
 
 			// create final data report
 			SimulationData data = {
 				.parameterValue = parameter.value(),
 				.averagePointsRemovedTotal = totalRemoved,
 				.averageGroundPointsRemoved = groundRemoved,
-				.averageUnassignedPointsRemoved = unassignedRemoved,
+				.averageGroundPointsRemovedTotal = groundRemovedTotal,
 				.averageConePointsRemoved = coneRemoved,
 			};
 
 			dataList.push_back(data);
 
-			debug << fstring("{%f, %f, %f, %f, %f}", parameter.value(), totalRemoved, groundRemoved, coneRemoved, unassignedRemoved) << std::endl;
+			debug << fstring("{%f, %f, %f, %f, %f}", parameter.value(), totalRemoved, groundRemoved, groundRemovedTotal, coneRemoved) << std::endl;
 
 		} while(parameter.stepParameter(numSteps));	
 
@@ -379,11 +379,11 @@ bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& 
 			if(!outputFile.good())
 				throw std::runtime_error(common::fstring("Unable to open/create file '%s'", filePath.c_str()));
 			// first line is a header with column names
-			outputFile << "value,total_removed,ground_removed,cone_removed,unassigned_removed" << std::endl;
+			outputFile << "value,total_removed,ground_removed,ground_removed_total,unassigned_removed" << std::endl;
 			// main data
 			for(SimulationData data : dataList)
 			{
-				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageConePointsRemoved, data.averageUnassignedPointsRemoved) << std::endl;
+				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageGroundPointsRemovedTotal, data.averageConePointsRemoved) << std::endl;
 			}
 		}	
 
