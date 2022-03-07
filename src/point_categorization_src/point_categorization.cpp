@@ -275,13 +275,31 @@ namespace point_categorization
 	{
 		DebugOut& debug = DebugOut::instance();
 
-		if(pcl::io::savePCDFile(_outputFileName, *_pCloud, true) == -1)
+		pcl::PointCloud<pcl::PointXYZ>::Ptr pOutputCloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+		for(pcl::PointXYZRGB& point : *_pCloud)
+		{
+			// if point isn't white, we add it to output
+			if(!(point.r == 255 && point.g == 255 && point.b == 255))
+			{
+				pOutputCloud->push_back(pcl::PointXYZ(point.x, point.y, point.z));
+				point.r = 255, point.g = 255, point.b = 255;
+				_cloudModified = true;
+			}
+		}
+
+		if(pOutputCloud->size() == 0)
+			return;
+
+		std::string outputFileName = common::fstring("%s_%d.pcd", _outputFileName.c_str(), _outputCounter++);
+
+		if(pcl::io::savePCDFile(outputFileName, *pOutputCloud, true) == -1)
 		{
 			throw std::runtime_error(std::string("Unable to save point cloud to: ") + _outputFileName);
 		}
 		else
 		{
-			debug << common::fstring("Successfully saved point cloud to '%s'", _outputFileName.c_str()) << std::endl;
+			debug << common::fstring("Successfully saved point cloud to '%s'", outputFileName.c_str()) << std::endl;
 		}
 	}
 
