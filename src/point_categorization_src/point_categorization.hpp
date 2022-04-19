@@ -29,8 +29,8 @@ namespace point_categorization
 			void run();
 
 		private:
-			const float _MAX_BRUSH_SIZE = 1.0f, _MIN_BRUSH_SIZE = 0.05f;
-			const float _BRUSH_SIZE_INCREMENT_SMALL = 0.05f, _BRUSH_SIZE_INCREMENT_LARGE = 0.2f;
+			const float _MAX_BRUSH_SIZE = 5.0f, _MIN_BRUSH_SIZE = 0.05f;
+			const float _BRUSH_SIZE_INCREMENT_SMALL = 0.05f, _BRUSH_SIZE_INCREMENT_LARGE = 0.5f;
 
 			float _brushSize = 0.1f;
 			common::PointCategory _currentPointCategory = common::PointCategory::Unassigned;
