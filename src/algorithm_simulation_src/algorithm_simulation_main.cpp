@@ -2,6 +2,9 @@
 #include <stdexcept>
 #include <fstream>
 #include <filesystem>
+#include <thread>
+#include <mutex>
+#include <algorithm>
 
 #include <boost/program_options.hpp>
 
@@ -21,7 +24,7 @@ using namespace algorithm_simulation;
 using common::DebugOut;
 
 // take the commandline arguments and resolve the input files, config file and output directory
-bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPointCloudPaths, std::string& configFilePath, std::string& outputPath)
+bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPointCloudPaths, std::string& configFilePath, std::string& outputPath, int& numThreads)
 {
 	DebugOut& debug = DebugOut::instance();
 
@@ -34,7 +37,8 @@ bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPoint
 			("help", "Help and usage")
 			("i", po::value<std::vector<std::string>>()->multitoken(), "Path(s) to input .pcd files")
 			("o", po::value<std::string>(), "Directory for output files")
-			("c", po::value<std::string>(), "Path to configuration file");
+			("c", po::value<std::string>(), "Path to configuration file")
+			("threads", po::value<int>()->default_value(4), "Number of threads to open when running the simulation.");
 
 		po::variables_map vm;
 		po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -43,6 +47,11 @@ bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPoint
 		if(vm.count("help"))
 		{
 			debug << desc << std::endl;
+			return false;
+		}
+		else if(vm["threads"].as<int>() < 1)
+		{
+			debug << "--threads must be given a value >= 1" << std::endl;
 			return false;
 		}
 		else if(!vm.count("i") || !vm.count("o") || !vm.count("c"))
@@ -56,7 +65,8 @@ bool handleArguments(int argc, char** argv, std::vector<std::string>& inputPoint
 			inputPointCloudPaths = vm["i"].as<std::vector<std::string>>();
 			configFilePath = vm["c"].as<std::string>();
 			outputPath = vm["o"].as<std::string>();
-			debug << common::fstring("configFilePath: %s\noutputPath: %s\ninputPointCloudPaths: ", configFilePath.c_str(), outputPath.c_str()) << std::endl;
+			numThreads = vm["threads"].as<int>();
+			debug << common::fstring("configFilePath: %s\noutputPath: %s\nnumThreads: %d\ninputPointCloudPaths: ", configFilePath.c_str(), outputPath.c_str(), numThreads) << std::endl;
 			for(std::string path : inputPointCloudPaths)
 				debug << path << std::endl;
 			debug << std::endl;
@@ -199,152 +209,211 @@ bool readPointClouds(const std::vector<std::string>& paths, std::vector<pcl::Poi
 	return true;
 }
 
-// returns a list of name-data pairs containing the algorithm results for each value
-// of the variable parameter for each parameter.
-SimulationResult simulateAlgorithm(unsigned int numSteps, const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr>& inputPointClouds,
-		ParameterSet baselineSet, std::vector<AlgorithmParameter> algorithmParameters)
+// work function for each thread that is created in simulateAlgorithm()
+// each thread will step through a parameter in a reduced range and output to
+// its own designated output vector
+void simulateAlgorithmWorkFunction(unsigned int numSteps, std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> inputPointClouds,
+		ParameterSet baselineSet, AlgorithmParameter parameter,
+		std::vector<SimulationData>& workPool, std::mutex& mWorkPool,
+		std::mutex& mDebug)
 {
+
 	using namespace common;
 
+	mDebug.lock();
 	DebugOut& debug = DebugOut::instance();
+	mDebug.unlock();
 
-	debug << "Beginning algorithm simulation..." << std::endl;
-
-	SimulationResult result;
-
-	// loop through each parameter for the algorithm
-	for(AlgorithmParameter parameter : algorithmParameters)
-	{
-
-		debug << fstring("Stepping through parameter '%s'...", parameter.name().c_str()) << std::endl;
-		
-		// list which will contain results for each parameter value
-		std::vector<SimulationData> dataList;
-		// initialize the value to minimum
-		parameter.value(parameter.minValue());
-		// initialize parameter set to default, so that other parameters
-		// take a known value
-		ParameterSet parameterSet = baselineSet;
+	typedef struct { float total,cone,ground,unassigned; } CloudData;
+	std::vector< CloudData > cloudData;
 	
-		typedef struct { float total,cone,ground,unassigned; } CloudData;
-		std::vector< CloudData > cloudData;
-		
-		// cache the total points and points in each category for our input
-		// point clouds.
+	// cache the total points and points in each category for our input
+	// point clouds.
+	for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
+	{
+		float t = 0.0f, c = 0.0f, g = 0.0f, u = 0.0f;
+
+		for(pcl::PointXYZRGB p : *pInputCloud)
+		{
+			t++;
+
+			CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
+
+			if(colour == categoryColours[PointCategory::Cone])
+				c++;
+			else if(colour == categoryColours[PointCategory::Ground])
+				g++;
+			else
+				u++;	
+		}
+
+		cloudData.push_back({
+			.total=t, .cone=c, .ground=g, .unassigned=u
+		});
+	}
+
+	ParameterSet parameterSet = baselineSet;
+
+	parameter.value(parameter.minValue());
+
+	int i = 0;
+
+	// step through all of the parameter's values
+	do
+	{
+		// keep track of how many points are removed for each category
+		double totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, groundRemovedTotal = 0.0f;
+
+		// modifies the parameter set according to the current value
+		// held by AlgorithmParameter parameter
+		parameter.updateParameterSet(parameterSet);
+
+		unsigned int j = 0;
+
 		for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
 		{
-			float t = 0.0f, c = 0.0f, g = 0.0f, u = 0.0f;
+			double total1 = cloudData[j].total, total2 = 0.0f;
+			// use cached cloud data for the initial values
+			double ground1 = cloudData[j].ground, cone1 = cloudData[j].cone, unassigned1 = cloudData[j].unassigned;
+			j++;
 
-			for(pcl::PointXYZRGB p : *pInputCloud)
+			double ground2 = 0.0f, cone2 = 0.0f, unassigned2 = 0.0f;
+
+			// use ground removal algorithm to generate a new point cloud
+			std::unique_ptr<ground_removal::SegmentArray<pcl::PointXYZRGB>> pSegmentArray = ground_removal::assignPointsToBinsAndSegments(*pInputCloud, parameterSet.numSegments, parameterSet.numBins);
+
+			// translate the ParameterSet object into ground_removal::AlgorithmParameters,
+			// which is the structure used by the algorithm.
+			// Note that technically, numBins and numSegments are not parameters and are
+			// instead used in segmentation.
+			ground_removal::AlgorithmParameters algorithmParams = {
+				.tM = parameterSet.tM,
+				.tMSmall = parameterSet.tMSmall,
+				.tB = parameterSet.tB,
+				.tRMSE = parameterSet.tRMSE,
+				.tDPrev = parameterSet.tDPrev,
+				.tDGround = parameterSet.tDGround,
+			};
+
+			pcl::PointCloud<pcl::PointXYZRGB>::Ptr pProcessedCloud = ground_removal::groundRemoval<pcl::PointXYZRGB>(*pSegmentArray, algorithmParams);
+
+			// go through the processed cloud to determine the difference in points for each
+			// category
+			for(pcl::PointXYZRGB p : *pProcessedCloud)
 			{
-				t++;
+				total2++;
 
 				CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
 
 				if(colour == categoryColours[PointCategory::Cone])
-					c++;
+					cone2++;
 				else if(colour == categoryColours[PointCategory::Ground])
-					g++;
+					ground2++;
 				else
-					u++;	
+					unassigned2++;
 			}
 
-			cloudData.push_back({
-				.total=t, .cone=c, .ground=g, .unassigned=u
-			});
+			// accumulate the ratios (which will be averaged)
+			totalRemoved += (total1-total2) / total1;
+			groundRemoved += (ground1-ground2) / (total1-total2);
+			groundRemovedTotal += (ground1-ground2) / (ground1);
+			coneRemoved += (cone1-cone2) / (total1-total2);
 
 		}
 
-		// loop through each possible value of the parameter
-		do
+		double numClouds = static_cast<double>(inputPointClouds.size());
+
+		// calculate averages
+		totalRemoved /= numClouds;
+		groundRemoved /= numClouds;
+		coneRemoved /= numClouds;
+		groundRemovedTotal /= numClouds;
+
+		// create final data report
+		SimulationData data = {
+			.parameterValue = parameter.value(),
+			.averagePointsRemovedTotal = totalRemoved,
+			.averageGroundPointsRemoved = groundRemoved,
+			.averageGroundPointsRemovedTotal = groundRemovedTotal,
+			.averageConePointsRemoved = coneRemoved,
+		};
+
+		// output data to work pool after acquiring a lock
 		{
-			// keep track of how many points are removed for each category
-			double totalRemoved = 0.0f, groundRemoved = 0.0f, coneRemoved = 0.0f, groundRemovedTotal = 0.0f;
+			const std::lock_guard lock(mWorkPool);
+			workPool.push_back(data);
+		}
 
-			// modifies the parameter set according to the current value
-			// held by AlgorithmParameter parameter
-			parameter.updateParameterSet(parameterSet);
+	} while(parameter.stepParameter(numSteps));
 
-			unsigned int j = 0;
+}
 
-			for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pInputCloud : inputPointClouds)
-			{
-				double total1 = cloudData[j].total, total2 = 0.0f;
-				// use cached cloud data for the initial values
-				double ground1 = cloudData[j].ground, cone1 = cloudData[j].cone, unassigned1 = cloudData[j].unassigned;
-				j++;
+SimulationResult simulateAlgorithm(unsigned int numSteps, int numThreads,
+		const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr>& inputPointClouds,
+		ParameterSet baselineSet, std::vector<AlgorithmParameter> algorithmParameters)
+{
 
-				double ground2 = 0.0f, cone2 = 0.0f, unassigned2 = 0.0f;
+	using namespace common;
 
-				// use ground removal algorithm to generate a new point cloud
-				std::unique_ptr<ground_removal::SegmentArray<pcl::PointXYZRGB>> pSegmentArray = ground_removal::assignPointsToBinsAndSegments(*pInputCloud, parameterSet.numSegments, parameterSet.numBins);
+	SimulationResult result;
 
-				// translate the ParameterSet object into ground_removal::AlgorithmParameters,
-				// which is the structure used by the algorithm.
-				// Note that technically, numBins and numSegments are not parameters and are
-				// instead used in segmentation.
-				ground_removal::AlgorithmParameters algorithmParams = {
-					.tM = parameterSet.tM,
-					.tMSmall = parameterSet.tMSmall,
-					.tB = parameterSet.tB,
-					.tRMSE = parameterSet.tRMSE,
-					.tDPrev = parameterSet.tDPrev,
-					.tDGround = parameterSet.tDGround,
-				};
+	DebugOut& debug = DebugOut::instance();
+	std::mutex mDebug;
 
-				pcl::PointCloud<pcl::PointXYZRGB>::Ptr pProcessedCloud = ground_removal::groundRemoval<pcl::PointXYZRGB>(*pSegmentArray, algorithmParams);
+	debug << "Beginning algorithm simulation..." << std::endl;
 
-				// go through the processed cloud to determine the difference in points for each
-				// category
-				for(pcl::PointXYZRGB p : *pProcessedCloud)
-				{
-					total2++;
+	for(AlgorithmParameter algorithmParameter : algorithmParameters)
+	{
+		debug << fstring("Stepping through parameter '%s'...", algorithmParameter.name().c_str()) << std::endl;
 
-					CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
+		typedef std::shared_ptr<std::thread> ThreadPtr;
+		std::vector<ThreadPtr> threadPool;
 
-					if(colour == categoryColours[PointCategory::Cone])
-						cone2++;
-					else if(colour == categoryColours[PointCategory::Ground])
-						ground2++;
-					else
-						unassigned2++;
-				}
+		// work pool which is written to by threads
+		// needs to be sorted after it has been populated
+		std::vector<SimulationData> workPool;
+		std::mutex mWorkPool;
 
-				// accumulate the ratios (which will be averaged)
-				totalRemoved += (total1-total2) / total1;
-				groundRemoved += (ground1-ground2) / (total1-total2);
-				groundRemovedTotal += (ground1-ground2) / (ground1);
-				coneRemoved += (cone1-cone2) / (total1-total2);
+		float stepDelta = (algorithmParameter.maxValue() - algorithmParameter.minValue()) / numThreads;
+		int stepsPerThread = numSteps / numThreads;
 
-			}
+		debug << "stepDelta: " << stepDelta << std::endl;
 
-			double numClouds = static_cast<double>(inputPointClouds.size());
+		// create worker threads and assign them some work
+		for(int i = 0; i < numThreads; i++)
+		{
+			AlgorithmParameter parameter = algorithmParameter;
+			parameter.maxValue(parameter.minValue() + stepDelta*(i+1));
+			parameter.minValue(parameter.minValue() + stepDelta*i);
 
-			// calculate averages
-			totalRemoved /= numClouds;
-			groundRemoved /= numClouds;
-			coneRemoved /= numClouds;
-			groundRemovedTotal /= numClouds;
+			debug << fstring("Creating thread #%d, stepping from %.2f to %.2f.", i+1, parameter.minValue(), parameter.maxValue()) << std::endl;
 
-			// create final data report
-			SimulationData data = {
-				.parameterValue = parameter.value(),
-				.averagePointsRemovedTotal = totalRemoved,
-				.averageGroundPointsRemoved = groundRemoved,
-				.averageGroundPointsRemovedTotal = groundRemovedTotal,
-				.averageConePointsRemoved = coneRemoved,
-			};
+			ThreadPtr pThread(new std::thread(simulateAlgorithmWorkFunction,
+					stepsPerThread, inputPointClouds, baselineSet,
+					parameter, 
+					std::ref(workPool), std::ref(mWorkPool),
+					std::ref(mDebug)));
+			threadPool.push_back(pThread);
+		}
 
-			dataList.push_back(data);
+		debug << "Finished creating threads, waiting for work to finish..." << std::endl;
 
-			debug << fstring("{%f, %f, %f, %f, %f}", parameter.value(), totalRemoved, groundRemoved, groundRemovedTotal, coneRemoved) << std::endl;
+		for(int i = 0; i < threadPool.size(); i++)
+		{
+			threadPool[i]->join();
+			debug << fstring("%d threads joined.", i+1) << std::endl;
+		}
 
-		} while(parameter.stepParameter(numSteps));	
+		debug << "Sorting work pool..." << std::endl;
 
-		result.push_back(std::make_pair(parameter.name(), dataList));
-	}	
+		// sort data so that it is in ascending order
+		std::sort(workPool.begin(), workPool.end(), [](const SimulationData& a, const SimulationData& b){ return a.parameterValue < b.parameterValue; });
 
-	debug << "Finished simulation..." << std::endl;
+		result.push_back(std::make_pair(algorithmParameter.name(), workPool));
+
+	}
+
+	debug << "Finished algorithm simulation." << std::endl;
 
 	return result;
 
@@ -406,9 +475,10 @@ int main(int argc, char* argv[])
 
 	std::vector<std::string> inputPointCloudPaths;
 	std::string configFilePath, outputPath;
+	int numThreads = 0;
 
 	// returning by reference
-	if(!handleArguments(argc, argv, inputPointCloudPaths, configFilePath, outputPath))
+	if(!handleArguments(argc, argv, inputPointCloudPaths, configFilePath, outputPath, numThreads))
 		return 0;
 
 	ParameterSet baselineSet;
@@ -425,7 +495,7 @@ int main(int argc, char* argv[])
 	if(!readPointClouds(inputPointCloudPaths, inputPointClouds))
 		return -1;
 
-	SimulationResult simulationResult = simulateAlgorithm(numSteps, inputPointClouds, baselineSet, algorithmParameters);
+	SimulationResult simulationResult = simulateAlgorithm(numSteps, numThreads, inputPointClouds, baselineSet, algorithmParameters);
 
 	if(!writeResultsToCSV(outputPath, simulationResult))
 		return -1;

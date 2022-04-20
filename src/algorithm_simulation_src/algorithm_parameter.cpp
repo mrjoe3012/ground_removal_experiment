@@ -42,6 +42,16 @@ namespace algorithm_simulation
 		return _maxValue;
 	}
 
+	void AlgorithmParameter::minValue(float value)
+	{
+		_minValue = value;
+	}
+
+	void AlgorithmParameter::maxValue(float value)
+	{
+		_maxValue = value;
+	}
+
 	bool AlgorithmParameter::stepParameter(unsigned int totalSteps)
 	{
 		float delta = (_maxValue-_minValue) / static_cast<float>(totalSteps);

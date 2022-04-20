@@ -45,6 +45,9 @@ namespace algorithm_simulation
 
 			float minValue() const;
 			float maxValue() const;
+
+			void minValue(float value);
+			void maxValue(float value);
 	};
 
 }
