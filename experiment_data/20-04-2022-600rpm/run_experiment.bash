@@ -1,8 +1,4 @@
-if [[ -z ${1+x} ]]; then
-	$1=1;
-fi;
-
-for (( i=$1; i<=$i; i++ )); do
+for (( i=$1; i<=1000; i++ )); do
 	if [[ $i -ne 1 ]]; then
 		cp config/experiment$((i-1)).cfg config/experiment$i.cfg;
 	fi;
