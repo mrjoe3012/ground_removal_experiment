@@ -314,10 +314,14 @@ void simulateAlgorithmWorkFunction(unsigned int numSteps, std::vector<pcl::Point
 			}
 
 			// accumulate the ratios (which will be averaged)
+
+			float x = 0.0f;
+
 			totalRemoved += (total1-total2) / total1;
 			groundRemoved += (ground1-ground2) / (total1-total2);
 			groundRemovedTotal += (ground1-ground2) / (ground1);
-			coneRemoved += (cone1-cone2) / (total1-total2);
+			if(cone1 > 0)
+				coneRemoved += (cone1-cone2) / (cone1);
 
 		}
 
