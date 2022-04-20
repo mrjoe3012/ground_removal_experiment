@@ -1,0 +1,7 @@
+numBins: 12
+numSegments: 12
+tB: 0.5
+tDGround: 0.15
+tDPrev: 0.3
+tM: 0.1
+tMSmall: 0.25
