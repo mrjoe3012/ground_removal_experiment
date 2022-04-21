@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 #include <stdexcept>
 #include <fstream>
 #include <filesystem>
@@ -318,8 +319,8 @@ void simulateAlgorithmWorkFunction(unsigned int numSteps, std::vector<pcl::Point
 			float x = 0.0f;
 
 			totalRemoved += (total1-total2) / total1;
-			groundRemoved += (ground1-ground2) / (total1-total2);
-			groundRemovedTotal += (ground1-ground2) / (ground1);
+			groundRemoved += (ground1-ground2) / (ground1);
+			groundRemovedTotal += (ground1-ground2) / (total1-total2);
 			if(cone1 > 0)
 				coneRemoved += (cone1-cone2) / (cone1);
 
@@ -423,23 +424,106 @@ SimulationResult simulateAlgorithm(unsigned int numSteps, int numThreads,
 
 }
 
-bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& result)
+// runs through the default parameters and measures their performance
+SimulationData generateBaselineReport(const ParameterSet& parameterSet,
+		const std::vector< pcl::PointCloud<pcl::PointXYZRGB >::Ptr >& inputPointClouds)
+{
+	using namespace common;
+	DebugOut& debug = DebugOut::instance();
+
+	debug << "Generating baseline report..." << std::endl;
+
+	float totalRemoved = 0.0f, groundRemoved = 0.0f, groundRemovedTotal = 0.0f, coneRemoved = 0.0f;
+	float numClouds = static_cast<float>(inputPointClouds.size());
+
+	for(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pCloud : inputPointClouds)
+	{
+		float cone1 = 0.0f, cone2 = 0.0f, ground1 = 0.0f, ground2 = 0.0f, total1 = 0.0f, total2 = 0.0f;
+
+		// total up points before ground removal
+		for(const pcl::PointXYZRGB& p : *pCloud)
+		{
+			total1++;
+
+			CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
+
+			if(colour == categoryColours[PointCategory::Cone])
+				cone1++;
+			else if(colour == categoryColours[PointCategory::Ground])
+				ground1++;
+		}
+
+		// perform ground removal
+		std::unique_ptr<ground_removal::SegmentArray<pcl::PointXYZRGB>> pSegmentArray = ground_removal::assignPointsToBinsAndSegments(*pCloud, parameterSet.numSegments, parameterSet.numBins);
+
+		ground_removal::AlgorithmParameters algorithmParams = {
+			.tM = parameterSet.tM,
+			.tMSmall = parameterSet.tMSmall,
+			.tB = parameterSet.tB,
+			.tRMSE = parameterSet.tRMSE,
+			.tDPrev = parameterSet.tDPrev,
+			.tDGround = parameterSet.tDGround,
+		};
+
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr pProcessedCloud = ground_removal::groundRemoval<pcl::PointXYZRGB>(*pSegmentArray, algorithmParams);
+
+		// total up points after ground removal
+		for(const pcl::PointXYZRGB& p : *pProcessedCloud)
+		{
+			total2++;
+			
+			CategoryColour colour = std::make_tuple(p.r, p.g, p.b);
+
+			if(colour == categoryColours[PointCategory::Cone])
+				cone2++;
+			else if(colour == categoryColours[PointCategory::Ground])
+				ground2++;
+		}
+
+		totalRemoved += (total1-total2) / (total1);
+		groundRemoved += (ground1-ground2) / (ground1);
+		groundRemovedTotal += (ground1-ground2) / (total1-total2);
+		if(cone1 != 0)
+			coneRemoved += (cone1-cone2) / (cone1);
+
+	}
+
+	totalRemoved /= numClouds;
+	groundRemoved /= numClouds;
+	groundRemovedTotal /= numClouds;
+	coneRemoved /= numClouds;
+
+	SimulationData result = {
+		.parameterValue = 0.0,
+		.averagePointsRemovedTotal = totalRemoved,
+		.averageGroundPointsRemoved = groundRemoved,
+		.averageGroundPointsRemovedTotal = groundRemovedTotal,
+		.averageConePointsRemoved = coneRemoved,	
+	};
+
+	debug << "Finished generating baseline report." << std::endl;
+
+	return result;
+}
+
+bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& result, const ParameterSet& baselineSet, const SimulationData& baselineReport)
 {
 
 	namespace fs = std::filesystem;
+	using namespace common;
 
 	DebugOut& debug = DebugOut::instance();
 
 	try
 	{
 	
-		debug << common::fstring("Writing simulation data to '%s'...", outputDirectoryPath.c_str()) << std::endl;
+		debug << fstring("Writing simulation data to '%s'...", outputDirectoryPath.c_str()) << std::endl;
 		// the output directory provided by the user
 		fs::path outputPath = outputDirectoryPath;
 
 		// ensure the path exists
 		if(!fs::exists(outputPath))
-			throw std::runtime_error(common::fstring("Bad output directory '%s'", outputDirectoryPath.c_str()));
+			throw std::runtime_error(fstring("Bad output directory '%s'", outputDirectoryPath.c_str()));
 	
 		// write a csv file for each parameter
 		for(std::pair<std::string, std::vector<SimulationData>> parameterData : result)
@@ -450,15 +534,55 @@ bool writeResultsToCSV(std::string outputDirectoryPath, const SimulationResult& 
 			std::vector<SimulationData>& dataList = parameterData.second;
 			std::ofstream outputFile(filePath, std::ios::out);
 			if(!outputFile.good())
-				throw std::runtime_error(common::fstring("Unable to open/create file '%s'", filePath.c_str()));
+				throw std::runtime_error(fstring("Unable to open/create file '%s'", filePath.c_str()));
 			// first line is a header with column names
 			outputFile << "value,total_removed,ground_removed,ground_removed_total,cone_removed" << std::endl;
 			// main data
 			for(SimulationData data : dataList)
 			{
-				outputFile << common::fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageGroundPointsRemovedTotal, data.averageConePointsRemoved) << std::endl;
+				outputFile << fstring("%f,%f,%f,%f,%f", data.parameterValue, data.averagePointsRemovedTotal, data.averageGroundPointsRemoved, data.averageGroundPointsRemovedTotal, data.averageConePointsRemoved) << std::endl;
 			}
 		}	
+
+		std::stringstream stream;
+
+		// output the performance of the default parameter set
+		stream << "###############################################\n";
+		stream << "#### Default Parameters Performance Report ####\n";
+		stream << "###############################################\n";
+		stream << fstring("total_removed: %.2f%%\n", baselineReport.averagePointsRemovedTotal*100.0f);
+		stream << fstring("ground_removed: %.2f%%\n", baselineReport.averageGroundPointsRemoved*100.0f);
+		stream << fstring("ground_removed_total: %.2f%%\n", baselineReport.averageGroundPointsRemovedTotal*100.0f);
+		stream << fstring("cone_removed: %.2f%%\n", baselineReport.averageConePointsRemoved*100.0f);
+		stream << "###############################################\n";
+
+		fs::path baselineReportPath = outputPath;
+		baselineReportPath += ("/performance.txt");
+
+		debug << stream.str();
+
+		std::ofstream baselineReportOutput(baselineReportPath);
+		baselineReportOutput << stream.rdbuf();
+		baselineReportOutput.close();
+
+		stream.str("");
+
+		// output the default parameters
+		stream << fstring("numBins: %d\n", baselineSet.numBins);
+		stream << fstring("numSegments: %d\n", baselineSet.numSegments);
+		stream << fstring("tB: %g\n", baselineSet.tB);
+		stream << fstring("tDGround: %g\n", baselineSet.tDGround);
+		stream << fstring("tDPrev: %g\n", baselineSet.tDPrev);
+		stream << fstring("tM: %g\n", baselineSet.tM);
+		stream << fstring("tMSmall: %g\n", baselineSet.tMSmall);
+		stream << fstring("tRMSE: %g\n", baselineSet.tRMSE);
+
+		fs::path baselineSetOutputPath = outputPath;
+		baselineSetOutputPath += "/parameters.txt";
+
+		std::ofstream baselineSetOutput(baselineSetOutputPath);
+		baselineSetOutput << stream.rdbuf();
+		baselineSetOutput.close();
 
 	}
 	catch(const std::exception& e)
@@ -495,13 +619,15 @@ int main(int argc, char* argv[])
 
 	std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> inputPointClouds;
 
-	// returning by reference
+	// returning by referenceconst
 	if(!readPointClouds(inputPointCloudPaths, inputPointClouds))
 		return -1;
 
 	SimulationResult simulationResult = simulateAlgorithm(numSteps, numThreads, inputPointClouds, baselineSet, algorithmParameters);
 
-	if(!writeResultsToCSV(outputPath, simulationResult))
+	SimulationData baselineReport = generateBaselineReport(baselineSet, inputPointClouds);
+
+	if(!writeResultsToCSV(outputPath, simulationResult, baselineSet, baselineReport))
 		return -1;
 
 	return 0;

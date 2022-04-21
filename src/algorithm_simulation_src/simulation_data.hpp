@@ -16,9 +16,9 @@ namespace algorithm_simulation
 			double parameterValue;
 			// (total points removed) / (total number of points)
 			double averagePointsRemovedTotal;
-			// (ground points removed) / (total points removed)
-			double averageGroundPointsRemoved;
 			// (ground points removed) / (total ground points)
+			double averageGroundPointsRemoved;
+			// (ground points removed) / (total points removed)
 			double averageGroundPointsRemovedTotal;
 			// (cone points removed) / (total points removed)
 			double averageConePointsRemoved;
