@@ -1,0 +1,8 @@
+###############################################
+#### Default Parameters Performance Report ####
+###############################################
+total_removed: 93.85%
+ground_removed: 96.52%
+ground_removed_total: 98.32%
+cone_removed: 34.20%
+###############################################

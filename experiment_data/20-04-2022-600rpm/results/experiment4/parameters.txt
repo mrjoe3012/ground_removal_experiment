@@ -1,0 +1,8 @@
+numBins: 6
+numSegments: 10
+tB: 0.5
+tDGround: 0.1
+tDPrev: 0.475
+tM: 0.5
+tMSmall: 0.5
+tRMSE: 0.005
